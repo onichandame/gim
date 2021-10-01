@@ -2,7 +2,6 @@ package gim
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -10,18 +9,18 @@ import (
 	goutils "github.com/onichandame/go-utils"
 )
 
-type routeFunc func(*gin.Context) interface{}
+type RouteFunc func(*gin.Context) interface{}
 type Route struct {
 	Endpoint string
-	Get      routeFunc
-	Post     routeFunc
-	Put      routeFunc
-	Delete   routeFunc
+	Get      RouteFunc
+	Post     RouteFunc
+	Put      RouteFunc
+	Delete   RouteFunc
 }
 
 func (r *Route) bootstrap(g *gin.RouterGroup) {
 	var loaded bool
-	handleRequest := func(fn routeFunc) gin.HandlerFunc {
+	handleRequest := func(fn RouteFunc) gin.HandlerFunc {
 		return func(c *gin.Context) {
 			runHandler := func() (res interface{}, err error) {
 				defer goutils.RecoverToErr(&err)
@@ -73,7 +72,7 @@ func (r *Route) bootstrap(g *gin.RouterGroup) {
 		loaded = true
 	}
 	if !loaded {
-		panic(errors.New(fmt.Sprintf("cannot load route %s as it does not implement any HTTP method",
+		panic((fmt.Errorf("cannot load route %s as it does not implement any HTTP method",
 			reflect.TypeOf(r).Elem().String())))
 	}
 }
