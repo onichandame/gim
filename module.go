@@ -6,17 +6,18 @@ import (
 
 type Module struct {
 	Imports     []*Module
-	Controllers []*Controller
+	Path        string
+	Routes      []*Route
 	Middlewares []*Middleware
 }
 
 func (m *Module) bootstrap(pg *gin.RouterGroup) {
-	subGroup := pg.Group("")
+	subGroup := pg.Group(m.Path)
 	// middlewares have to be loaded before subGroups are added
 	for _, mw := range m.Middlewares {
 		subGroup.Use(mw.Use)
 	}
-	for _, ctlr := range m.Controllers {
+	for _, ctlr := range m.Routes {
 		ctlr.bootstrap(subGroup)
 	}
 	for _, sm := range m.Imports {

@@ -15,25 +15,21 @@ func TestModule(t *testing.T) {
 	mod := gim.Module{
 		Imports: []*gim.Module{
 			{
-				Controllers: []*gim.Controller{
+				Path: "1", Routes: []*gim.Route{
 					{
-						Path: "1", Routes: []*gim.Route{
-							{
-								Endpoint: "",
-								Get: func(c *gin.Context) interface{} {
-									return fmt.Sprintf("%s1", c.GetString("response"))
-								},
-							},
+						Endpoint: "",
+						Get: func(c *gin.Context) interface{} {
+							return fmt.Sprintf("%s1", c.GetString("response"))
 						},
 					},
+				},
+			},
+			{
+				Path: "2", Routes: []*gim.Route{
 					{
-						Path: "2", Routes: []*gim.Route{
-							{
-								Endpoint: "",
-								Post: func(c *gin.Context) interface{} {
-									return fmt.Sprintf("%s2", c.GetString("response"))
-								},
-							},
+						Endpoint: "",
+						Post: func(c *gin.Context) interface{} {
+							return fmt.Sprintf("%s2", c.GetString("response"))
 						},
 					},
 				},
