@@ -38,8 +38,13 @@ func TestModule(t *testing.T) {
 		Middlewares: []*gim.Middleware{
 			{
 				Use: func(c *gin.Context) {
-					c.Set("response", "mid")
+					c.Set("response", "mid1")
 					c.Next()
+				},
+			},
+			{
+				Use: func(c *gin.Context) {
+					c.Set("response", fmt.Sprintf("%smid2", c.GetString("response")))
 				},
 			},
 		},
@@ -49,10 +54,10 @@ func TestModule(t *testing.T) {
 	req1, _ := http.NewRequest("GET", "/1", nil)
 	r.ServeHTTP(rec1, req1)
 	assert.Equal(t, 200, rec1.Code)
-	assert.Equal(t, "mid1", rec1.Body.String())
+	assert.Equal(t, "mid1mid21", rec1.Body.String())
 	rec2 := httptest.NewRecorder()
 	req2, _ := http.NewRequest("POST", "/2", nil)
 	r.ServeHTTP(rec2, req2)
 	assert.Equal(t, 200, rec2.Code)
-	assert.Equal(t, "mid2", rec2.Body.String())
+	assert.Equal(t, "mid1mid22", rec2.Body.String())
 }
