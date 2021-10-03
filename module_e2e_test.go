@@ -33,6 +33,13 @@ func TestModule(t *testing.T) {
 						},
 					},
 				},
+				Middlewares: []*gim.Middleware{
+					{
+						Use: func(c *gin.Context) {
+							c.Set("response", fmt.Sprintf("%smid2", c.GetString("response")))
+						},
+					},
+				},
 			},
 		},
 		Middlewares: []*gim.Middleware{
@@ -42,11 +49,6 @@ func TestModule(t *testing.T) {
 					c.Next()
 				},
 			},
-			{
-				Use: func(c *gin.Context) {
-					c.Set("response", fmt.Sprintf("%smid2", c.GetString("response")))
-				},
-			},
 		},
 	}
 	r := mod.Bootstrap()
@@ -54,7 +56,7 @@ func TestModule(t *testing.T) {
 	req1, _ := http.NewRequest("GET", "/1", nil)
 	r.ServeHTTP(rec1, req1)
 	assert.Equal(t, 200, rec1.Code)
-	assert.Equal(t, "mid1mid21", rec1.Body.String())
+	assert.Equal(t, "mid11", rec1.Body.String())
 	rec2 := httptest.NewRecorder()
 	req2, _ := http.NewRequest("POST", "/2", nil)
 	r.ServeHTTP(rec2, req2)
