@@ -3,11 +3,17 @@ package graphql
 import "github.com/graphql-go/graphql"
 
 func GetSchemaFromStruct(instance interface{}) *graphql.Schema {
-	rootQueryObject := GetObjectFromStruct(&struct{}{})
-	rootMutationObject := GetObjectFromStruct(&struct{}{})
+	objectsSchema := GetObjectFromStruct(instance)
+	resolver := GetQueryResolverFromStruct(instance, objectsSchema)
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
-		Query:    rootQueryObject,
-		Mutation: rootMutationObject,
+		Query: graphql.NewObject(graphql.ObjectConfig{
+			Name:   "Query",
+			Fields: &resolver.Query,
+		}),
+		Mutation: graphql.NewObject(graphql.ObjectConfig{
+			Name:   "Mutation",
+			Fields: &resolver.Query,
+		}),
 	})
 	if err != nil {
 		panic(err)

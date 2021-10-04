@@ -1,7 +1,6 @@
 package graphql
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -15,19 +14,19 @@ const (
 	MUTATION_PREFIX = "Mutation"
 )
 
-type ResolverFuncArgs struct {
+type ResolverFuncParam struct {
 	Ctx  *gin.Context
 	Args interface{}
 }
 
-type ResolverFunc func(ResolverFuncArgs) interface{}
+type ResolverFunc func(*ResolverFuncParam) interface{}
 
 type Resolvers struct {
 	Query    graphql.Fields
 	Mutation graphql.Fields
 }
 
-func GetQueryResolverFromStruct(instance interface{}, objType graphql.Object) (resolvers *Resolvers) {
+func GetQueryResolverFromStruct(instance interface{}, objType *graphql.Object) (resolvers *Resolvers) {
 	resolvers = new(Resolvers)
 	resolvers.Query = make(graphql.Fields)
 	resolvers.Mutation = make(graphql.Fields)
@@ -40,15 +39,22 @@ func GetQueryResolverFromStruct(instance interface{}, objType graphql.Object) (r
 		if strings.HasPrefix(m.Name, QUERY_PREFIX) {
 			validateFunc(m.Func.Interface())
 			name := strings.Replace(m.Name, QUERY_PREFIX, "", 1)
+			args, fn := getResolverFunc(&m)
 			resolvers.Query[name] = &graphql.Field{
-				Type: &objType,
-				Args: graphql.FieldConfigArgument{},
+				Type:    objType,
+				Args:    *args,
+				Resolve: fn,
 			}
 		} else if strings.HasPrefix(m.Name, MUTATION_PREFIX) {
 			validateFunc(m.Func.Interface())
 			validateFunc(m)
 			name := strings.Replace(m.Name, MUTATION_PREFIX, "", 1)
-			resolvers.Mutation[name] = &graphql.Field{}
+			args, fn := getResolverFunc(&m)
+			resolvers.Mutation[name] = &graphql.Field{
+				Type:    objType,
+				Args:    *args,
+				Resolve: fn,
+			}
 		}
 	}
 	return resolvers
@@ -60,7 +66,12 @@ func validateFunc(fn interface{}) {
 	}
 }
 
-func getResolverFunc(m *reflect.Method)(*graphql.FieldConfigArgument,graphql.FieldResolveFn) {
+func getResolverFunc(m *reflect.Method) (args *graphql.FieldConfigArgument, fn graphql.FieldResolveFn) {
+	args = &graphql.FieldConfigArgument{}
 	validateFunc(m.Func.Interface())
-	args:=m.Type.In(0)
+	paramType := m.Type.In(0)
+	if paramType.Kind() != reflect.Ptr {
+		panic(fmt.Errorf("argument of a resolver function should be pointer to ResolverFuncParam"))
+	}
+	return args, fn
 }
