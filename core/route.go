@@ -1,4 +1,4 @@
-package gim
+package core
 
 import (
 	"encoding/json"
@@ -28,31 +28,45 @@ func (r *Route) bootstrap(g *gin.RouterGroup) {
 				return res, err
 			}
 			res, err := runHandler()
+			var contentType string
+			var body interface{}
+			var status int
 			if err != nil {
-				if c.Writer.Status() <= 200 {
-					c.Status(400)
-				}
-				c.JSON(c.Writer.Status(), gin.H{"message": err.Error()})
-				return
-			}
-			if res != nil {
-				var body []byte
-				var contentType string
-				if r, ok := res.([]byte); ok {
-					body = r
-					contentType = "text/plain"
-				} else if r, ok := res.(string); ok {
-					body = []byte(r)
-					contentType = "text/plain"
-				} else {
-					if body, err = json.Marshal(res); err != nil {
-						c.JSON(500, gin.H{"message": err.Error()})
-						return
+				if e, ok := err.(*GimError); ok {
+					if e.Status != 0 {
+						status = e.Status
 					}
+					if e.Body != nil {
+						body = e.Body
+					}
+				} else {
+					body = err.Error()
+				}
+				if status < 400 {
+					status = 400
+				}
+			} else if res != nil {
+				body = res
+			}
+			c.Status(status)
+			var responseBody []byte
+			if r, ok := body.([]byte); ok {
+				responseBody = r
+				contentType = "text/plain"
+			} else if r, ok := body.(string); ok {
+				responseBody = []byte(r)
+				contentType = "text/plain"
+			} else {
+				if responseBody, err = json.Marshal(body); err != nil {
+					status = 500
+					responseBody = []byte("failed to serialize response body")
+					contentType = "text/plain"
+					fmt.Print(err)
+				} else {
 					contentType = "application/json"
 				}
-				c.Data(200, contentType, body)
 			}
+			c.Data(status, contentType, responseBody)
 		}
 	}
 	if r.Post != nil {

@@ -1,4 +1,4 @@
-package gim
+package core
 
 import (
 	"github.com/gin-gonic/gin"
@@ -9,6 +9,7 @@ type Module struct {
 	Path        string
 	Routes      []*Route
 	Middlewares []*Middleware
+	Providers   []*Provider
 }
 
 func (m *Module) bootstrap(pg *gin.RouterGroup) {
@@ -16,6 +17,9 @@ func (m *Module) bootstrap(pg *gin.RouterGroup) {
 	// middlewares have to be loaded before subGroups are added
 	for _, mw := range m.Middlewares {
 		subGroup.Use(mw.Use)
+	}
+	for _, p := range m.Providers {
+		p.Inject(subGroup)
 	}
 	for _, ctlr := range m.Routes {
 		ctlr.bootstrap(subGroup)
