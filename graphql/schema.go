@@ -2,9 +2,9 @@ package graphql
 
 import "github.com/graphql-go/graphql"
 
-func GetSchemaFromStruct(instance interface{}) *graphql.Schema {
+func GetSchemaFromStruct(instance ...interface{}) *graphql.Schema {
 	objectsSchema := GetObjectFromStruct(instance)
-	resolver := GetQueryResolverFromStruct(instance, objectsSchema)
+	resolver := GetResolverFromStruct(instance, objectsSchema)
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
 		Query: graphql.NewObject(graphql.ObjectConfig{
 			Name:   "Query",

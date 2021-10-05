@@ -26,7 +26,7 @@ type Resolvers struct {
 	Mutation graphql.Fields
 }
 
-func GetQueryResolverFromStruct(instance interface{}, objType *graphql.Object) (resolvers *Resolvers) {
+func GetResolverFromStruct(instance interface{}, objType *graphql.Object) (resolvers *Resolvers) {
 	resolvers = new(Resolvers)
 	resolvers.Query = make(graphql.Fields)
 	resolvers.Mutation = make(graphql.Fields)
