@@ -1,4 +1,4 @@
-package core
+package gim
 
 import (
 	"encoding/json"

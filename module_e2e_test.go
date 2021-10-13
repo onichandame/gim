@@ -1,4 +1,4 @@
-package core_test
+package gim_test
 
 import (
 	"errors"
@@ -9,15 +9,15 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	gimCore "github.com/onichandame/gim/core"
+	gim "github.com/onichandame/gim"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestModule(t *testing.T) {
-	mod := gimCore.Module{
-		Imports: []*gimCore.Module{
+	mod := gim.Module{
+		Imports: []*gim.Module{
 			{
-				Path: "1", Routes: []*gimCore.Route{
+				Path: "1", Routes: []*gim.Route{
 					{
 						Endpoint: "",
 						Get: func(c *gin.Context) interface{} {
@@ -25,14 +25,14 @@ func TestModule(t *testing.T) {
 						},
 					},
 				},
-				Middlewares: []*gimCore.Middleware{
+				Middlewares: []*gim.Middleware{
 					{
 						Use: func(c *gin.Context) {
 							c.Set("response", fmt.Sprintf("%smid2", c.GetString("response")))
 						},
 					},
 				},
-				Providers: []*gimCore.Provider{
+				Providers: []*gim.Provider{
 					{
 						Inject: func(g *gin.RouterGroup) {
 							g.Use(func(c *gin.Context) {
@@ -45,7 +45,7 @@ func TestModule(t *testing.T) {
 			},
 			{
 				Path: "/errors",
-				Routes: []*gimCore.Route{
+				Routes: []*gim.Route{
 					{
 						Endpoint: "/err",
 						Get: func(c *gin.Context) interface{} {
@@ -58,13 +58,13 @@ func TestModule(t *testing.T) {
 							type Error struct {
 								Msg string `json:"msg"`
 							}
-							panic(gimCore.NewGimError(500, &Error{Msg: "err"}))
+							panic(gim.NewGimError(500, &Error{Msg: "err"}))
 						},
 					},
 				},
 			},
 		},
-		Middlewares: []*gimCore.Middleware{
+		Middlewares: []*gim.Middleware{
 			{
 				Use: func(c *gin.Context) {
 					c.Set("response", "mid1")
@@ -72,7 +72,7 @@ func TestModule(t *testing.T) {
 				},
 			},
 		},
-		Providers: []*gimCore.Provider{
+		Providers: []*gim.Provider{
 			{
 				Inject: func(g *gin.RouterGroup) {
 					g.Use(func(c *gin.Context) {

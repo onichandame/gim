@@ -1,4 +1,4 @@
-package core
+package gim
 
 import "github.com/gin-gonic/gin"
 
