@@ -10,11 +10,15 @@ type ProviderArgs struct {
 type Provider struct {
 	Provide interface{}
 	Factory func(app context.Context) interface{}
-	Token     interface{}
+	Token   interface{}
 }
 
-func(p*Provider)getToken()interface{}{
-	if p.Token==nil{return p}else{return p.Token}
+func (p *Provider) getToken() interface{} {
+	if p.Token == nil {
+		return p
+	} else {
+		return p.Token
+	}
 }
 
 func (p *Provider) bootstrap(app context.Context) context.Context {

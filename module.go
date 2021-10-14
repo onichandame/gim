@@ -58,5 +58,6 @@ func (m *Module) Bootstrap() *gin.Engine {
 
 func (m *Module) Get(prov *Provider) interface{} {
 	key := prov.getToken()
-	return m.app.Value(key)
+	res := m.app.Value(key)
+	return res
 }

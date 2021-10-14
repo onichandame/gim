@@ -1,6 +1,10 @@
 package main
 
-import "github.com/onichandame/gim"
+import (
+	"log"
+
+	"github.com/onichandame/gim"
+)
 
 func main() {
 	prov := gim.Provider{
@@ -27,5 +31,7 @@ func main() {
 		},
 	}
 	eng := mod.Bootstrap()
+	str := mod.Get(&prov).(string)
+	log.Printf("response content: %s", str)
 	eng.Run("0.0.0.0:3000")
 }
