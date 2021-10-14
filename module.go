@@ -1,41 +1,55 @@
 package gim
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 )
 
 type Module struct {
 	Imports     []*Module
-	Path        string
-	Routes      []*Route
 	Middlewares []*Middleware
+	Controllers []*Controller
 	Providers   []*Provider
 	Jobs        []*Job
 }
 
-func (m *Module) bootstrap(pg *gin.RouterGroup) {
-	subGroup := pg.Group(m.Path)
+var eng = &Provider{
+	Provide: gin.Default(),
+}
+
+func (m *Module) bootstrap(app context.Context) context.Context {
+	// do not double-bootstrap a module
+	if m := app.Value(m); m != nil {
+		return app
+	}
+	app = context.WithValue(app, m, m)
+	// init providers
+	for _, p := range m.Providers {
+		app = p.bootstrap(app)
+	}
+	// init sub-modules
+	for _, sub := range m.Imports {
+		app = sub.bootstrap(app)
+	}
 	// init jobs
 	for _, job := range m.Jobs {
-		job.bootstrap()
+		job.bootstrap(app)
 	}
-	// middlewares have to be loaded before subGroups are added
+	// init controllers
+	eng := app.Value(eng).(*gin.Engine)
 	for _, mw := range m.Middlewares {
-		subGroup.Use(mw.Use)
+		eng.Use(mw.Use)
 	}
-	for _, p := range m.Providers {
-		p.Inject(subGroup)
+	for _, ctlr := range m.Controllers {
+		ctlr.bootstrap(eng, app)
 	}
-	for _, ctlr := range m.Routes {
-		ctlr.bootstrap(subGroup)
-	}
-	for _, sm := range m.Imports {
-		sm.bootstrap(subGroup)
-	}
+	return app
 }
 
 func (m *Module) Bootstrap() *gin.Engine {
-	eng := gin.Default()
-	m.bootstrap(eng.Group(""))
-	return eng
+	app := context.Background()
+	app = context.WithValue(app, eng, eng.Provide)
+	m.bootstrap(app)
+	return app.Value(eng).(*gin.Engine)
 }

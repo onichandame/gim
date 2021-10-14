@@ -1,6 +1,7 @@
 package gim
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -9,7 +10,12 @@ import (
 	goutils "github.com/onichandame/go-utils"
 )
 
-type RouteFunc func(*gin.Context) interface{}
+type RouteArgs struct {
+	Ctx *gin.Context
+	App context.Context
+}
+
+type RouteFunc func(args RouteArgs) interface{}
 type Route struct {
 	Endpoint string
 	Get      RouteFunc
@@ -18,13 +24,13 @@ type Route struct {
 	Delete   RouteFunc
 }
 
-func (r *Route) bootstrap(g *gin.RouterGroup) {
+func (r *Route) bootstrap(g *gin.RouterGroup, app context.Context) {
 	var loaded bool
 	handleRequest := func(fn RouteFunc) gin.HandlerFunc {
 		return func(c *gin.Context) {
 			runHandler := func() (res interface{}, err error) {
 				defer goutils.RecoverToErr(&err)
-				res = fn(c)
+				res = fn(RouteArgs{Ctx: c, App: app})
 				return res, err
 			}
 			res, err := runHandler()
