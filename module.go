@@ -24,13 +24,13 @@ func (m *Module) bootstrap(app context.Context) context.Context {
 		return app
 	}
 	app = context.WithValue(app, m, m)
-	// init providers
-	for _, p := range m.Providers {
-		app = p.bootstrap(app)
-	}
 	// init sub-modules
 	for _, sub := range m.Imports {
 		app = sub.bootstrap(app)
+	}
+	// init providers
+	for _, p := range m.Providers {
+		app = p.bootstrap(app)
 	}
 	// init jobs
 	for _, job := range m.Jobs {
