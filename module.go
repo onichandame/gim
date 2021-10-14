@@ -12,6 +12,7 @@ type Module struct {
 	Controllers []*Controller
 	Providers   []*Provider
 	Jobs        []*Job
+	app         context.Context
 }
 
 var eng = &Provider{
@@ -50,6 +51,12 @@ func (m *Module) bootstrap(app context.Context) context.Context {
 func (m *Module) Bootstrap() *gin.Engine {
 	app := context.Background()
 	app = context.WithValue(app, eng, eng.Provide)
-	m.bootstrap(app)
-	return app.Value(eng).(*gin.Engine)
+	app = m.bootstrap(app)
+	m.app = app
+	return m.app.Value(eng).(*gin.Engine)
+}
+
+func (m *Module) Get(prov *Provider) interface{} {
+	key := prov.getToken()
+	return m.app.Value(key)
 }

@@ -8,7 +8,7 @@ func main() {
 			{
 				Providers: []*gim.Provider{
 					{
-						Provide: "hello from deep", Key: "sub",
+						Provide: "hello from deep", Token: "sub",
 					},
 				},
 				Controllers: []*gim.Controller{

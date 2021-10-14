@@ -7,7 +7,7 @@ func main() {
 		Provide: "hello world",
 	}
 	mod := gim.Module{
-		Providers: []*gim.Provider{&prov, {Provide: "hello world(alt)", Key: "alt"}},
+		Providers: []*gim.Provider{&prov, {Provide: "hello world(alt)", Token: "alt"}},
 		Controllers: []*gim.Controller{
 			{
 				Routes: []*gim.Route{
