@@ -1,14 +1,23 @@
 package main
 
-import "github.com/onichandame/gim"
+import (
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+	"github.com/onichandame/gim"
+)
 
 func main() {
 	mod := gim.Module{
 		Imports: []*gim.Module{
 			{
-				Providers: []*gim.Provider{
+				Middlewares: []*gim.Middleware{
 					{
-						Provide: "hello from deep", Token: "sub",
+						Use: func(c *gin.Context) {
+							fmt.Println("nested middleware in")
+							c.Next()
+							fmt.Println("nested middleware out")
+						},
 					},
 				},
 				Controllers: []*gim.Controller{
@@ -17,7 +26,7 @@ func main() {
 						Routes: []*gim.Route{
 							{
 								Get: func(args gim.RouteArgs) interface{} {
-									return "greetings from depth"
+									return "greetings from nested"
 								},
 							},
 						},
@@ -27,12 +36,11 @@ func main() {
 		},
 		Controllers: []*gim.Controller{
 			{
-				Path: "root",
 				Routes: []*gim.Route{
 					{
 						Endpoint: "sub",
 						Get: func(args gim.RouteArgs) interface{} {
-							return args.App.Value("sub")
+							return "greetings from sub"
 						},
 					},
 					{
@@ -40,6 +48,15 @@ func main() {
 							return "greetings from root"
 						},
 					},
+				},
+			},
+		},
+		Middlewares: []*gim.Middleware{
+			{
+				Use: func(c *gin.Context) {
+					fmt.Println("root in")
+					c.Next()
+					fmt.Println("root out")
 				},
 			},
 		},
