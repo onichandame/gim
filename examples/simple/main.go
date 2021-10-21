@@ -1,6 +1,11 @@
 package main
 
-import "github.com/onichandame/gim"
+import (
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+	"github.com/onichandame/gim"
+)
 
 func main() {
 	mod := &gim.Module{
@@ -13,6 +18,15 @@ func main() {
 							return "hello world"
 						},
 					},
+				},
+			},
+		},
+		Middlewares: []*gim.Middleware{
+			{
+				Use: func(c *gin.Context) {
+					fmt.Println("received request")
+					c.Next()
+					fmt.Println("responded request")
 				},
 			},
 		},

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/onichandame/gim"
@@ -11,6 +13,26 @@ func main() {
 	mod := gim.Module{
 		Imports: []*gim.Module{
 			{
+				Jobs: []*gim.Job{
+					{
+						Immediate: &gim.ImmediateJobConfig{
+							Blocking: true,
+						},
+						Run: func(app context.Context) {
+							fmt.Println("blocking job started")
+							time.Sleep(time.Second * 2)
+							fmt.Println("blocking job done")
+						},
+					},
+					{
+						Immediate: &gim.ImmediateJobConfig{},
+						Run: func(app context.Context) {
+							fmt.Println("non-blocking job started")
+							time.Sleep(time.Second * 2)
+							fmt.Println("non-blocking job done")
+						},
+					},
+				},
 				Middlewares: []*gim.Middleware{
 					{
 						Use: func(c *gin.Context) {
