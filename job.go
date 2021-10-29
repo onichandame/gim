@@ -1,8 +1,6 @@
 package gim
 
 import (
-	"context"
-
 	"github.com/robfig/cron/v3"
 )
 
@@ -13,11 +11,11 @@ type ImmediateJobConfig struct {
 type Job struct {
 	Cron      string
 	Immediate *ImmediateJobConfig
-	Run       func(app context.Context)
+	Run       func()
 }
 
-func (j *Job) bootstrap(app context.Context) {
-	run := func() { j.Run(app) }
+func (j *Job) bootstrap() {
+	run := func() { j.Run() }
 	if j.Cron != "" {
 		cron := cron.New()
 		cron.AddFunc(j.Cron, run)

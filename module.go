@@ -1,8 +1,6 @@
 package gim
 
 import (
-	"context"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,41 +9,38 @@ type Module struct {
 	Middlewares []*Middleware
 	Controllers []*Controller
 	Jobs        []*Job
-	app         context.Context
-	rg          *gin.RouterGroup
+	Engine      *gin.Engine
+	modules     map[*Module]interface{}
 }
 
-func (m *Module) bootstrap(app context.Context) context.Context {
+func (m *Module) bootstrap() {
 	// do not double-bootstrap a module
-	if m := app.Value(m); m != nil {
-		return app
+	if _, ok := m.modules[m]; ok {
+		return
 	}
-	app = context.WithValue(app, m, m)
+	m.modules[m] = nil
 	// load middlewares
 	for _, mw := range m.Middlewares {
-		m.rg.Use(mw.Use)
+		m.Engine.Use(mw.Use)
 	}
 	// init sub-modules
 	for _, sub := range m.Imports {
-		sub.rg = m.rg.Group("")
-		app = sub.bootstrap(app)
+		sub.Engine = m.Engine
+		sub.bootstrap()
 	}
 	// init jobs
 	for _, job := range m.Jobs {
-		job.bootstrap(app)
+		job.bootstrap()
 	}
 	// init controllers
 	for _, ctlr := range m.Controllers {
-		ctlr.bootstrap(m.rg, app)
+		ctlr.bootstrap(m.Engine)
 	}
-	return app
 }
 
 func (m *Module) Bootstrap() *gin.Engine {
 	eng := gin.Default()
-	m.rg = eng.Group("")
-	app := context.Background()
-	app = m.bootstrap(app)
-	m.app = app
+	m.Engine = eng
+	m.bootstrap()
 	return eng
 }

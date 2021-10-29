@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -18,7 +17,7 @@ func main() {
 						Immediate: &gim.ImmediateJobConfig{
 							Blocking: true,
 						},
-						Run: func(app context.Context) {
+						Run: func() {
 							fmt.Println("blocking job started")
 							time.Sleep(time.Second * 2)
 							fmt.Println("blocking job done")
@@ -26,7 +25,7 @@ func main() {
 					},
 					{
 						Immediate: &gim.ImmediateJobConfig{},
-						Run: func(app context.Context) {
+						Run: func() {
 							fmt.Println("non-blocking job started")
 							time.Sleep(time.Second * 2)
 							fmt.Println("non-blocking job done")
