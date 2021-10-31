@@ -1,36 +1,29 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	"github.com/onichandame/gim"
 )
 
+type MainModule struct{}
+
+func (mod *MainModule) Controllers() []interface{} {
+	return []interface{}{newController}
+}
+
+type MainController struct{}
+
+func newController() *MainController {
+	var ctlr MainController
+	return &ctlr
+}
+func (ctlr *MainController) Get(c *gin.Context) interface{} {
+	return `hello world`
+}
+
 func main() {
-	mod := &gim.Module{
-		Controllers: []*gim.Controller{
-			{
-				Path: "",
-				Routes: []*gim.Route{
-					{
-						Get: func(args gim.RouteArgs) interface{} {
-							return "hello world"
-						},
-					},
-				},
-			},
-		},
-		Middlewares: []*gim.Middleware{
-			{
-				Use: func(c *gin.Context) {
-					fmt.Println("received request")
-					c.Next()
-					fmt.Println("responded request")
-				},
-			},
-		},
-	}
-	eng := mod.Bootstrap()
-	eng.Run("0.0.0.0:3000")
+	root := gim.Bootstrap(&MainModule{})
+	var eng gin.Engine
+	root.Resolve(&eng)
+	eng.Run("0.0.0.0:80")
 }

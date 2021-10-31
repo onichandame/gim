@@ -4,14 +4,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Controller struct {
-	Path   string
-	Routes []*Route
+type pathed interface {
+	Path() string
 }
 
-func (c *Controller) bootstrap(eng *gin.Engine) {
-	g := eng.Group(c.Path)
-	for _, r := range c.Routes {
-		r.bootstrap(g)
-	}
+type getRouted interface {
+	Get(*gin.Context) interface{}
+}
+type postRouted interface {
+	Post(*gin.Context) interface{}
+}
+type putRouted interface {
+	Put(*gin.Context) interface{}
+}
+type deleteRouted interface {
+	Delete(*gin.Context) interface{}
 }

@@ -4,28 +4,29 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-type ImmediateJobConfig struct {
-	Blocking bool
+type job interface {
+	Run()
 }
 
-type Job struct {
-	Cron      string
-	Immediate *ImmediateJobConfig
-	Run       func()
+type cronjob interface {
+	Cron() string
 }
 
-func (j *Job) bootstrap() {
-	run := func() { j.Run() }
-	if j.Cron != "" {
-		cron := cron.New()
-		cron.AddFunc(j.Cron, run)
-		cron.Start()
-	}
-	if j.Immediate != nil {
-		if j.Immediate.Blocking {
-			run()
-		} else {
-			go run()
+type immediatejob interface {
+	Blocking() bool
+}
+
+func loadJob(instance interface{}) {
+	if j, ok := instance.(job); ok {
+		if c, ok := j.(cronjob); ok {
+			cron.New().AddFunc(c.Cron(), j.Run)
+		}
+		if im, ok := j.(immediatejob); ok {
+			if im.Blocking() {
+				j.Run()
+			} else {
+				go j.Run()
+			}
 		}
 	}
 }
