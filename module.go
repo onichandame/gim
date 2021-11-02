@@ -39,6 +39,8 @@ func (a App) Server() *gin.Engine {
 	return a.eng
 }
 
+type AppConfig struct{}
+
 func Bootstrap(main interface{}) *App {
 	var app App
 	app.modules = injector.NewContainer()
@@ -121,7 +123,7 @@ func Bootstrap(main interface{}) *App {
 						for i := 0; i < t.NumIn(); i++ {
 							in := goutils.UnwrapType(t.In(i))
 							insing := reflect.New(in).Interface()
-							if goutils.Try(func() { app.modules.Resolve(insing) }) != nil {
+							if goutils.Try(func() { app.modcontainers[sing].Resolve(insing) }) != nil {
 								resolvable = false
 								break
 							}
@@ -144,7 +146,6 @@ func Bootstrap(main interface{}) *App {
 			sort()
 			for _, p := range sorted {
 				app.modcontainers[sing].Bind(p)
-				loadJob(getSingleton(app.modcontainers[sing], p))
 			}
 		}
 	}
