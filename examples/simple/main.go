@@ -22,8 +22,6 @@ func (ctlr *MainController) Get(c *gin.Context) interface{} {
 }
 
 func main() {
-	root := gim.Bootstrap(&MainModule{})
-	var eng gin.Engine
-	root.Resolve(&eng)
-	eng.Run("0.0.0.0:80")
+	app := gim.Bootstrap(&MainModule{})
+	app.Server().Run("0.0.0.0:80")
 }

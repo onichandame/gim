@@ -13,6 +13,12 @@ import (
 type withImports interface {
 	Imports() []interface{}
 }
+type withServer interface {
+	Server(*gin.Engine) *gin.Engine
+}
+type withExports interface {
+	Exports() []interface{}
+}
 type withControllers interface {
 	Controllers() []interface{}
 }
@@ -22,197 +28,207 @@ type withMiddlewares interface {
 type withProviders interface {
 	Providers() []interface{}
 }
-type ProviderConfig struct {
-	Global bool
-	Public bool
-	// either an instance or a factory function
-	Provide interface{}
+
+type App struct {
+	modules       injector.Container
+	modcontainers map[interface{}]injector.Container
+	eng           *gin.Engine
 }
 
-func bootstrap(module interface{}, parentContainer *injector.Container) {
-	rootContainer := parentContainer.GetRoot()
-	mod := reflect.New(goutils.UnwrapType(reflect.TypeOf(module))).Interface()
-	// if module alread loaded, do not load again
-	err := goutils.Try(func() { rootContainer.Resolve(mod) })
-	if err == nil {
-		return
+func (a App) Server() *gin.Engine {
+	return a.eng
+}
+
+func Bootstrap(main interface{}) *App {
+	var app App
+	app.modules = injector.NewContainer()
+	app.modcontainers = make(map[interface{}]injector.Container)
+	app.eng = gin.Default()
+	getSingleton := func(container injector.Container, ent interface{}) interface{} {
+		sing := newEntity(ent)
+		container.Resolve(sing)
+		return sing
 	}
-	// if module not loaded, load it to root
-	rootContainer.Bind(module, true)
-	container := injector.NewContainer()
-	container.SetParent(parentContainer)
-	// load sub-modules
-	if mod, ok := module.(withImports); ok {
-		for _, child := range mod.Imports() {
-			bootstrap(child, container)
+	var loadModule func(mod interface{}, visited map[interface{}]interface{})
+	loadModule = func(mod interface{}, visited map[interface{}]interface{}) {
+		newVisited := func(self interface{}) map[interface{}]interface{} {
+			res := make(map[interface{}]interface{})
+			for k, v := range visited {
+				res[k] = v
+			}
+			res[self] = nil
+			return res
+		}
+
+		if sing := newEntity(mod); goutils.Try(func() { app.modules.Resolve(sing) }) == nil {
+			if _, ok := visited[sing]; ok {
+				panic(fmt.Errorf("circular module dependency detected for module %v", goutils.UnwrapType(reflect.TypeOf(sing)).Name()))
+			}
+		} else {
+			app.modules.Bind(mod)
+			sing := getSingleton(app.modules, mod)
+			app.modcontainers[sing] = injector.NewContainer()
+			if m, ok := sing.(withImports); ok {
+				for _, child := range m.Imports() {
+					loadModule(child, newVisited(sing))
+				}
+			}
+			if m, ok := mod.(withServer); ok {
+				app.eng = m.Server(app.eng)
+			}
 		}
 	}
-	// load providers
-	if mod, ok := module.(withProviders); ok {
-		providers := make([]ProviderConfig, 0)
-		for _, prov := range mod.Providers() {
-			v := goutils.UnwrapValue(reflect.ValueOf(prov))
-			if v.Type() == reflect.TypeOf(ProviderConfig{}) {
-				providers = append(providers, v.Interface().(ProviderConfig))
-			} else {
-				providers = append(providers, ProviderConfig{Provide: prov})
+	loadModule(main, make(map[interface{}]interface{}))
+	main = getSingleton(app.modules, main)
+
+	var loadProviders func(mod interface{})
+	loadProviders = func(mod interface{}) {
+		sing := getSingleton(app.modules, mod)
+		if m, ok := sing.(withImports); ok {
+			for _, child := range m.Imports() {
+				loadProviders(child)
+				childsing := getSingleton(app.modules, child)
+				var loadExports func(c injector.Container, exp interface{})
+				loadExports = func(c injector.Container, exp interface{}) {
+					if goutils.Try(func() {
+						expsing := getSingleton(app.modules, exp)
+						if expmod, ok := expsing.(withExports); ok {
+							for _, expexp := range expmod.Exports() {
+								loadExports(app.modcontainers[expsing], expexp)
+							}
+						}
+					}) != nil {
+						expsing := getSingleton(c, exp)
+						app.modcontainers[sing].Bind(expsing)
+					}
+				}
+				if m, ok := childsing.(withExports); ok {
+					for _, exp := range m.Exports() {
+						loadExports(app.modcontainers[childsing], exp)
+					}
+				}
 			}
 		}
-		bindProvider := func(prov ProviderConfig) {
-			if prov.Global {
-				rootContainer.Bind(prov.Provide, true)
-			} else {
-				container.Bind(prov.Provide, prov.Public)
-			}
-			// get singleton for job loading
-			p := newEntity(prov.Provide)
-			container.Resolve(p)
-			// init jobs defined in singleton
-			loadJob(p)
-		}
-		loadedInd := make([]int, 0)
-		sort := func() {
-			for _, ind := range loadedInd {
-				providers = append(providers[:ind], providers[ind+1:]...)
-			}
-			loadedInd = make([]int, 0)
-		}
-		sortProviders := func() {
-			// static providers
-			for ind, prov := range providers {
-				t := goutils.UnwrapType(reflect.TypeOf(prov.Provide))
-				if t.Kind() != reflect.Func {
-					bindProvider(prov)
-					loadedInd = append(loadedInd, ind)
+		if m, ok := sing.(withProviders); ok {
+			sorted := make([]interface{}, 0)
+			var lastsorted int
+			var sort func()
+			sort = func() {
+				for _, p := range m.Providers() {
+					t := goutils.UnwrapType(reflect.TypeOf(p))
+					if t.Kind() == reflect.Func {
+						resolvable := true
+						for i := 0; i < t.NumIn(); i++ {
+							in := goutils.UnwrapType(t.In(i))
+							insing := reflect.New(in).Interface()
+							if goutils.Try(func() { app.modules.Resolve(insing) }) != nil {
+								resolvable = false
+								break
+							}
+						}
+						if resolvable {
+							sorted = append(sorted, p)
+						}
+					} else {
+						sorted = append(sorted, p)
+					}
+				}
+				if lastsorted == len(sorted) {
+					panic(fmt.Errorf("providers in module %v have circular dependency", goutils.UnwrapType(reflect.TypeOf(sing)).Name()))
+				}
+				lastsorted = len(sorted)
+				if len(sorted) != len(m.Providers()) {
+					sort()
 				}
 			}
 			sort()
-			for ind, prov := range providers {
-				t := reflect.TypeOf(prov.Provide)
-				resolvable := true
-				for i := 0; i < t.NumIn(); i++ {
-					in := goutils.UnwrapType(t.In(i))
-					if goutils.Try(func() { container.Resolve(reflect.New(in).Interface()) }) != nil {
-						resolvable = false
-						break
-					}
-				}
-				if resolvable {
-					bindProvider(prov)
-					loadedInd = append(loadedInd, ind)
-				}
-			}
-			sort()
-		}
-		lastlength := len(providers)
-		for {
-			sortProviders()
-			if len(providers) == lastlength {
-				panic(fmt.Errorf("providers in module %v have circular dependency", module))
-			} else {
-				lastlength = len(providers)
-			}
-			if len(providers) == 0 {
-				break
+			for _, p := range sorted {
+				app.modcontainers[sing].Bind(p)
+				loadJob(getSingleton(app.modcontainers[sing], p))
 			}
 		}
 	}
-	// load middlewares
-	if mod, ok := module.(withMiddlewares); ok {
-		var eng gin.Engine
-		container.Resolve(&eng)
-		for _, mw := range mod.Middlewares() {
-			container.Bind(mw, false)
-			m := newEntity(mw)
-			container.Resolve(m)
-			if v, ok := m.(withMiddleware); ok {
-				eng.Use(v.Use())
+
+	loadProviders(main)
+
+	var loadControllers func(mod interface{})
+	loadControllers = func(mod interface{}) {
+		sing := getSingleton(app.modules, mod)
+		if m, ok := sing.(withImports); ok {
+			for _, child := range m.Imports() {
+				loadControllers(child)
 			}
 		}
-	}
-	// load controllers
-	if mod, ok := module.(withControllers); ok {
-		for _, ctlr := range mod.Controllers() {
-			container.Bind(ctlr, false)
-			var eng gin.Engine
-			container.Resolve(&eng)
-			instance := newEntity(ctlr)
-			container.Resolve(instance)
-			path := ""
-			if p, ok := instance.(pathed); ok {
-				path = p.Path()
-			}
-			grp := eng.Group(path)
-			getHandler := func(ctl func(*gin.Context) interface{}) gin.HandlerFunc {
-				return func(c *gin.Context) {
-					var res interface{}
-					err := goutils.Try(func() { res = ctl(c) })
-					var status int
-					var contentType string
-					var response []byte
-					var body interface{}
-					populateRes := func(res interface{}, defStatus int, defBody interface{}) {
-						if s, ok := res.(withStatus); ok {
-							status = s.Status()
-						} else {
-							status = defStatus
+		if m, ok := mod.(withControllers); ok {
+			for _, c := range m.Controllers() {
+				app.modcontainers[sing].Bind(c)
+				csing := getSingleton(app.modcontainers[sing], c)
+				path := ""
+				if p, ok := csing.(pathed); ok {
+					path = p.Path()
+				}
+				grp := app.eng.Group(path)
+				getHandler := func(ctl func(*gin.Context) interface{}) gin.HandlerFunc {
+					return func(c *gin.Context) {
+						var res interface{}
+						err := goutils.Try(func() { res = ctl(c) })
+						var status int
+						var contentType string
+						var response []byte
+						var body interface{}
+						populateRes := func(res interface{}, defStatus int, defBody interface{}) {
+							if s, ok := res.(withStatus); ok {
+								status = s.Status()
+							} else {
+								status = defStatus
+							}
+							if r, ok := res.(withBody); ok {
+								body = r.Body()
+							} else {
+								body = defBody
+							}
 						}
-						if r, ok := res.(withBody); ok {
-							body = r.Body()
+						if err == nil {
+							populateRes(res, 200, res)
 						} else {
-							body = defBody
+							populateRes(err, 400, err.Error())
 						}
-					}
-					if err == nil {
-						populateRes(res, 200, res)
-					} else {
-						populateRes(err, 400, err.Error())
-					}
-					if b, ok := body.([]byte); ok {
-						response = b
-						contentType = "text/plain"
-					} else if r, ok := body.(string); ok {
-						response = []byte(r)
-						contentType = "text/plain"
-					} else {
-						if response, err = json.Marshal(body); err != nil {
-							status = 500
-							response = []byte("failed to serialize response body")
+						if b, ok := body.([]byte); ok {
+							response = b
 							contentType = "text/plain"
-							fmt.Println(err)
+						} else if r, ok := body.(string); ok {
+							response = []byte(r)
+							contentType = "text/plain"
 						} else {
-							contentType = "application/json"
+							if response, err = json.Marshal(body); err != nil {
+								status = 500
+								response = []byte("failed to serialize response body")
+								contentType = "text/plain"
+								fmt.Println(err)
+							} else {
+								contentType = "application/json"
+							}
 						}
+						c.Data(status, contentType, response)
 					}
-					c.Data(status, contentType, response)
 				}
-			}
-			if h, ok := instance.(getRouted); ok {
-				grp.GET("", getHandler(h.Get))
-			}
-			if h, ok := instance.(postRouted); ok {
-				grp.POST("", getHandler(h.Post))
-			}
-			if h, ok := instance.(putRouted); ok {
-				grp.PUT("", getHandler(h.Put))
-			}
-			if h, ok := instance.(deleteRouted); ok {
-				grp.DELETE("", getHandler(h.Delete))
+				if h, ok := csing.(getRouted); ok {
+					grp.GET(path, getHandler(h.Get))
+				}
+				if h, ok := csing.(postRouted); ok {
+					grp.POST(path, getHandler(h.Post))
+				}
+				if h, ok := csing.(putRouted); ok {
+					grp.PUT(path, getHandler(h.Put))
+				}
+				if h, ok := csing.(deleteRouted); ok {
+					grp.DELETE(path, getHandler(h.Delete))
+				}
 			}
 		}
 	}
-}
 
-type rootModule struct {
-	mainMod interface{}
-}
+	loadControllers(main)
 
-func (r rootModule) Imports() []interface{} { return []interface{}{&HTTPModule{}, r.mainMod} }
-
-func Bootstrap(main interface{}) *injector.Container {
-	var root rootModule
-	root.mainMod = main
-	rootContainer := injector.NewContainer()
-	bootstrap(&root, rootContainer)
-	return rootContainer
+	return &app
 }

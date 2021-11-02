@@ -20,22 +20,16 @@ func (ctl *MainController) Get(c *gin.Context) interface{} {
 
 type MWModule struct{}
 
-func (m *MWModule) Middlewares() []interface{} { return []interface{}{&LoggerMW{}} }
-
-type LoggerMW struct{}
-
-func (l *LoggerMW) Use() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (m *MWModule) Server(eng *gin.Engine) *gin.Engine {
+	eng.Use(func(c *gin.Context) {
 		fmt.Println("before request")
 		c.Next()
-		c.Status(500)
 		fmt.Println("after request")
-	}
+	})
+	return eng
 }
 
 func main() {
-	root := gim.Bootstrap(&MainModule{})
-	var eng gin.Engine
-	root.Resolve(&eng)
-	eng.Run("0.0.0.0:80")
+	app := gim.Bootstrap(&MainModule{})
+	app.Server().Run("0.0.0.0:80")
 }
