@@ -96,5 +96,18 @@ func TestContainer(t *testing.T) {
 			container.Resolve(&d)
 			assert.Equal(t, &ent, d.ent)
 		})
+		t.Run("rebind to another container", func(t *testing.T) {
+			c1 := injector.NewContainer()
+			c2 := injector.NewContainer()
+			var ent Entity
+			c1.Bind(&ent)
+			var res1 Entity
+			c1.Resolve(&res1)
+			c2.Bind(&res1)
+			var res2 Entity
+			c2.Resolve(&res2)
+			assert.Equal(t, &ent, &res2)
+			assert.Equal(t, &res1, &res2)
+		})
 	})
 }

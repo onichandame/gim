@@ -39,7 +39,10 @@ func (a App) Server() *gin.Engine {
 	return a.eng
 }
 
-type AppConfig struct{}
+type ContainersModule struct {
+	modules       injector.Container
+	modcontainers map[interface{}]injector.Container
+}
 
 func Bootstrap(main interface{}) *App {
 	var app App
@@ -112,11 +115,12 @@ func Bootstrap(main interface{}) *App {
 			}
 		}
 		if m, ok := sing.(withProviders); ok {
-			sorted := make([]interface{}, 0)
-			var lastsorted int
+			unsorted := m.Providers()
+			sortedIndicis := make([]int, 0)
+			lastunsorted := len(unsorted)
 			var sort func()
 			sort = func() {
-				for _, p := range m.Providers() {
+				for i, p := range unsorted {
 					t := goutils.UnwrapType(reflect.TypeOf(p))
 					if t.Kind() == reflect.Func {
 						resolvable := true
@@ -129,24 +133,30 @@ func Bootstrap(main interface{}) *App {
 							}
 						}
 						if resolvable {
-							sorted = append(sorted, p)
+							app.modcontainers[sing].Bind(p)
+							sortedIndicis = append(sortedIndicis, i)
 						}
 					} else {
-						sorted = append(sorted, p)
+						app.modcontainers[sing].Bind(p)
+						sortedIndicis = append(sortedIndicis, i)
 					}
 				}
-				if lastsorted == len(sorted) {
+				removeElement := func(ind int) {
+					unsorted = append(unsorted[:ind], unsorted[ind+1:]...)
+				}
+				for i := len(sortedIndicis) - 1; i >= 0; i-- {
+					ind := sortedIndicis[i]
+					removeElement(ind)
+				}
+				if lastunsorted == len(unsorted) {
 					panic(fmt.Errorf("providers in module %v have circular dependency", goutils.UnwrapType(reflect.TypeOf(sing)).Name()))
 				}
-				lastsorted = len(sorted)
-				if len(sorted) != len(m.Providers()) {
+				lastunsorted = len(unsorted)
+				if len(unsorted) != 0 {
 					sort()
 				}
 			}
 			sort()
-			for _, p := range sorted {
-				app.modcontainers[sing].Bind(p)
-			}
 		}
 	}
 

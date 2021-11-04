@@ -1,21 +1,27 @@
 package main
 
+import "fmt"
+
 type SubModule struct{}
 
 func (m *SubModule) Providers() []interface{} { return []interface{}{newSubService} }
 func (m *SubModule) Exports() []interface{}   { return []interface{}{newSubService} }
 
-type subService struct {
+type SubService struct {
 	greetingIndex      int
 	greetingcandidates []string
 }
 
-func newSubService() *subService {
-	var svc subService
+var subsvc *SubService
+
+func newSubService() *SubService {
+	var svc SubService
 	svc.greetingcandidates = []string{"hello", "world"}
+	fmt.Println("svc")
+	fmt.Printf("%p\n", &svc)
 	return &svc
 }
-func (svc *subService) getGreeting() string {
+func (svc *SubService) getGreeting() string {
 	res := svc.greetingcandidates[svc.greetingIndex]
 	svc.greetingIndex++
 	if svc.greetingIndex >= len(svc.greetingcandidates) {
@@ -23,3 +29,4 @@ func (svc *subService) getGreeting() string {
 	}
 	return res
 }
+, 

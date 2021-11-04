@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/onichandame/gim"
 )
@@ -10,9 +12,13 @@ type MainModule struct{}
 func (*MainModule) Imports() []interface{}     { return []interface{}{&SubModule{}} }
 func (*MainModule) Controllers() []interface{} { return []interface{}{newMainController} }
 
-type MainController struct{ svc *subService }
+type MainController struct{ svc *SubService }
 
-func newMainController(svc *subService) *MainController {
+func newMainController(svc *SubService) *MainController {
+	fmt.Println("controller")
+	fmt.Printf("%p\n", svc)
+	fmt.Println(svc)
+	fmt.Println(svc == subsvc)
 	var c MainController
 	c.svc = svc
 	return &c
