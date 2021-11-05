@@ -6,10 +6,10 @@ import (
 	goutils "github.com/onichandame/go-utils"
 )
 
-func newEntity(ent interface{})interface{}{
-	t:=goutils.UnwrapType(reflect.TypeOf(ent))
-	if t.Kind()==reflect.Func{
-		t=goutils.UnwrapType( t.Out(0))
+func newEntity(entOrFunc interface{}) interface{} {
+	t := goutils.UnwrapType(reflect.TypeOf(entOrFunc))
+	if t.Kind() == reflect.Func {
+		t = goutils.UnwrapType(t.Out(0))
 	}
 	return reflect.New(t).Interface()
 }

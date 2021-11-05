@@ -1,24 +1,23 @@
 package main
 
-import "fmt"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 type SubModule struct{}
 
-func (m *SubModule) Providers() []interface{} { return []interface{}{newSubService} }
-func (m *SubModule) Exports() []interface{}   { return []interface{}{newSubService} }
+func (m *SubModule) Controllers() []interface{} { return []interface{}{newSubController} }
+func (m *SubModule) Providers() []interface{}   { return []interface{}{newSubService} }
+func (m *SubModule) Exports() []interface{}     { return []interface{}{&SubService{}} }
 
 type SubService struct {
 	greetingIndex      int
 	greetingcandidates []string
 }
 
-var subsvc *SubService
-
 func newSubService() *SubService {
 	var svc SubService
 	svc.greetingcandidates = []string{"hello", "world"}
-	fmt.Println("svc")
-	fmt.Printf("%p\n", &svc)
 	return &svc
 }
 func (svc *SubService) getGreeting() string {
@@ -29,4 +28,17 @@ func (svc *SubService) getGreeting() string {
 	}
 	return res
 }
-, 
+
+type SubController struct{ svc *SubService }
+
+func newSubController(svc *SubService) *SubController {
+	var ctl SubController
+	ctl.svc = svc
+	return &ctl
+}
+
+func (*SubController) Path() string { return "sub" }
+
+func (c *SubController) Get(*gin.Context) interface{} {
+	return c.svc.getGreeting()
+}

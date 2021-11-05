@@ -61,17 +61,15 @@ func TestContainer(t *testing.T) {
 	t.Run("resolve singleton", func(t *testing.T) {
 		type Entity struct{}
 		t.Run("concret", func(t *testing.T) {
-			assert.NotPanics(t, func() {
+			t.Run("existing", func(t *testing.T) {
 				container := injector.NewContainer()
 				ent := new(Entity)
 				container.Bind(ent)
-				var resolved Entity
-				container.Resolve(&resolved)
-				assert.Equal(t, ent, &resolved)
+				assert.Equal(t, ent, container.Resolve(new(Entity)))
 			})
-			assert.Panics(t, func() {
+			t.Run("non-existing", func(t *testing.T) {
 				container := injector.NewContainer()
-				container.Resolve(new(Entity))
+				assert.Nil(t, container.Resolve(new(Entity)))
 			})
 		})
 		t.Run("constructor", func(t *testing.T) {
@@ -79,8 +77,7 @@ func TestContainer(t *testing.T) {
 			var ent Entity
 			container.Bind(func() *Entity { return &ent })
 			var resolved Entity
-			container.Resolve(&resolved)
-			assert.Equal(t, &ent, &resolved)
+			assert.Equal(t, &ent, container.Resolve(&resolved))
 		})
 		t.Run("dependency", func(t *testing.T) {
 			container := injector.NewContainer()
@@ -92,22 +89,24 @@ func TestContainer(t *testing.T) {
 				d.ent = ent
 				return &d
 			})
-			var d Dependent
-			container.Resolve(&d)
-			assert.Equal(t, &ent, d.ent)
+			assert.Equal(t, &ent, container.Resolve(new(Dependent)).(*Dependent).ent)
 		})
 		t.Run("rebind to another container", func(t *testing.T) {
 			c1 := injector.NewContainer()
 			c2 := injector.NewContainer()
 			var ent Entity
 			c1.Bind(&ent)
-			var res1 Entity
-			c1.Resolve(&res1)
+			res1 := c1.Resolve(new(Entity)).(*Entity)
 			c2.Bind(&res1)
-			var res2 Entity
-			c2.Resolve(&res2)
-			assert.Equal(t, &ent, &res2)
-			assert.Equal(t, &res1, &res2)
+			res2 := c2.Resolve(new(Entity)).(*Entity)
+			assert.Equal(t, &ent, res2)
+			assert.Equal(t, res1, res2)
+		})
+		t.Run("resolve or panic", func(t *testing.T) {
+			c := injector.NewContainer()
+			assert.Panics(t, func() { c.ResolveOrPanic("") })
+			c.Bind(new(Entity))
+			assert.NotPanics(t, func() { c.ResolveOrPanic(new(Entity)) })
 		})
 	})
 }

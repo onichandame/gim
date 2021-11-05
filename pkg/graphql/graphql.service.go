@@ -27,23 +27,17 @@ type GraphqlService struct {
 	path      string
 }
 
-var svcsvc *GraphqlService
-
 func newGraphqlService() *GraphqlService {
 	var svc GraphqlService
-	fmt.Println("svc")
 	svc.enums = make(map[reflect.Type]*graphql.Enum)
 	svc.scalars = make(map[reflect.Type]*graphql.Scalar)
 	svc.resolvers = make([]interface{}, 0)
-	svcsvc = &svc
 	return &svc
 }
 
 func (svc *GraphqlService) SetPath(path string) { svc.path = path }
 
 func (svc *GraphqlService) AddResolver(resolver interface{}) {
-	fmt.Println(svcsvc == svc)
-	fmt.Println("add")
 	svc.resolvers = append(svc.resolvers, resolver)
 }
 
@@ -187,6 +181,9 @@ func (svc *GraphqlService) buildSchema() *graphql.Schema {
 			}
 		}
 		for i := 0; i < pt.NumMethod(); i++ {
+			fmt.Println(pt)
+			fmt.Println(pt.NumMethod())
+			fmt.Println(pv.NumMethod())
 			mt := pt.Method(i)
 			mv := pv.Method(i)
 			if isResolverFunc(mt.Type) {

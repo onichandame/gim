@@ -51,7 +51,7 @@ func newSubPrivateService(s *SubService) *SubPrivateService {
 	return &svc
 }
 
-func TestGim(t *testing.T) {
+func TestGimModule(t *testing.T) {
 	gim.Bootstrap(&MainModule{})
 	getptr := func(ptr interface{}) string { return fmt.Sprintf("%p", ptr) }
 	assert.NotNil(t, subService)

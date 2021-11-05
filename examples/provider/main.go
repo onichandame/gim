@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	"github.com/onichandame/gim"
 )
@@ -15,10 +13,6 @@ func (*MainModule) Controllers() []interface{} { return []interface{}{newMainCon
 type MainController struct{ svc *SubService }
 
 func newMainController(svc *SubService) *MainController {
-	fmt.Println("controller")
-	fmt.Printf("%p\n", svc)
-	fmt.Println(svc)
-	fmt.Println(svc == subsvc)
 	var c MainController
 	c.svc = svc
 	return &c

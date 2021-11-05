@@ -39,20 +39,13 @@ func (a App) Server() *gin.Engine {
 	return a.eng
 }
 
-type ContainersModule struct {
-	modules       injector.Container
-	modcontainers map[interface{}]injector.Container
-}
-
 func Bootstrap(main interface{}) *App {
 	var app App
 	app.modules = injector.NewContainer()
 	app.modcontainers = make(map[interface{}]injector.Container)
 	app.eng = gin.Default()
 	getSingleton := func(container injector.Container, ent interface{}) interface{} {
-		sing := newEntity(ent)
-		container.Resolve(sing)
-		return sing
+		return container.ResolveOrPanic(newEntity(ent))
 	}
 	var loadModule func(mod interface{}, visited map[interface{}]interface{})
 	loadModule = func(mod interface{}, visited map[interface{}]interface{}) {
@@ -64,8 +57,8 @@ func Bootstrap(main interface{}) *App {
 			res[self] = nil
 			return res
 		}
-
-		if sing := newEntity(mod); goutils.Try(func() { app.modules.Resolve(sing) }) == nil {
+		sing := app.modules.Resolve(newEntity(mod))
+		if sing != nil {
 			if _, ok := visited[sing]; ok {
 				panic(fmt.Errorf("circular module dependency detected for module %v", goutils.UnwrapType(reflect.TypeOf(sing)).Name()))
 			}
@@ -126,8 +119,8 @@ func Bootstrap(main interface{}) *App {
 						resolvable := true
 						for i := 0; i < t.NumIn(); i++ {
 							in := goutils.UnwrapType(t.In(i))
-							insing := reflect.New(in).Interface()
-							if goutils.Try(func() { app.modcontainers[sing].Resolve(insing) }) != nil {
+							insing := app.modcontainers[sing].Resolve(reflect.New(in).Interface())
+							if insing == nil {
 								resolvable = false
 								break
 							}
@@ -224,16 +217,16 @@ func Bootstrap(main interface{}) *App {
 					}
 				}
 				if h, ok := csing.(getRouted); ok {
-					grp.GET(path, getHandler(h.Get))
+					grp.GET("", getHandler(h.Get))
 				}
 				if h, ok := csing.(postRouted); ok {
-					grp.POST(path, getHandler(h.Post))
+					grp.POST("", getHandler(h.Post))
 				}
 				if h, ok := csing.(putRouted); ok {
-					grp.PUT(path, getHandler(h.Put))
+					grp.PUT("", getHandler(h.Put))
 				}
 				if h, ok := csing.(deleteRouted); ok {
-					grp.DELETE(path, getHandler(h.Delete))
+					grp.DELETE("", getHandler(h.Delete))
 				}
 			}
 		}

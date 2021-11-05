@@ -2,7 +2,6 @@ package graphql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/graphql-go/graphql"
@@ -14,8 +13,6 @@ type graphqlController struct {
 
 func newGraphqlBuilderController(svc *GraphqlService) *graphqlController {
 	var ctl graphqlController
-	fmt.Println("ctl")
-	fmt.Println(len(svc.resolvers))
 	ctl.schema = svc.buildSchema()
 	return &ctl
 }

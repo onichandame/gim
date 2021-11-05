@@ -21,7 +21,7 @@ func (c Container) Bind(entity interface{}) {
 		inputs := make([]reflect.Value, 0)
 		for i := 0; i < t.NumIn(); i++ {
 			in := goutils.UnwrapType(t.In(i))
-			inputs = append(inputs, reflect.ValueOf(c.resolve(reflect.New(in).Interface())))
+			inputs = append(inputs, reflect.ValueOf(c.Resolve(reflect.New(in).Interface())))
 		}
 		t = goutils.UnwrapType(t.Out(0))
 		v = goutils.UnwrapValue(v.Call(inputs)[0])
@@ -32,11 +32,14 @@ func (c Container) Bind(entity interface{}) {
 	c[t] = (v.Addr().Interface())
 }
 
-func (c Container) resolve(entity interface{}) interface{} {
+func (c Container) Resolve(entity interface{}) interface{} {
 	return c[goutils.UnwrapType(reflect.TypeOf(entity))]
 }
 
-func (c Container) Resolve(entity interface{}) {
-	v := reflect.ValueOf(entity)
-	v.Elem().Set(goutils.UnwrapValue(reflect.ValueOf(c.resolve(entity))))
+func (c Container) ResolveOrPanic(entity interface{}) interface{} {
+	res, ok := c[goutils.UnwrapType(reflect.TypeOf(entity))]
+	if !ok {
+		panic(fmt.Errorf("singleton %v not found", goutils.UnwrapType(reflect.TypeOf(entity)).Name()))
+	}
+	return res
 }
