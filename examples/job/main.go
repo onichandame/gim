@@ -7,10 +7,10 @@ import (
 	"github.com/onichandame/gim/pkg/job"
 )
 
-type MainModule struct{}
-
-func (m *MainModule) Imports() []interface{}   { return []interface{}{&job.JobModule{}} }
-func (m *MainModule) Providers() []interface{} { return []interface{}{newMainService} }
+var MainModule = gim.Module{
+	Imports:   []*gim.Module{&job.JobModule},
+	Providers: []interface{}{newMainService},
+}
 
 type MainService struct{}
 
@@ -25,6 +25,7 @@ func (svc *MainService) print() {
 }
 
 func main() {
-	app := gim.Bootstrap(&MainModule{})
-	app.Server().Run("0.0.0.0:80")
+	MainModule.Bootstrap()
+	done := make(chan int)
+	<-done
 }

@@ -2,13 +2,15 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/onichandame/gim"
+	gimgin "github.com/onichandame/gim/pkg/gin"
 )
 
-type SubModule struct{}
-
-func (m *SubModule) Controllers() []interface{} { return []interface{}{newSubController} }
-func (m *SubModule) Providers() []interface{}   { return []interface{}{newSubService} }
-func (m *SubModule) Exports() []interface{}     { return []interface{}{&SubService{}} }
+var SubModule = gim.Module{
+	Imports:   []*gim.Module{&gimgin.GinModule},
+	Providers: []interface{}{newSubService, newSubController},
+	Exports:   []interface{}{newSubService},
+}
 
 type SubService struct {
 	greetingIndex      int
@@ -31,13 +33,14 @@ func (svc *SubService) getGreeting() string {
 
 type SubController struct{ svc *SubService }
 
-func newSubController(svc *SubService) *SubController {
+func newSubController(svc *SubService, ginsvc *gimgin.GinService) *SubController {
 	var ctl SubController
 	ctl.svc = svc
+	ginsvc.AddRoute(func(rg *gin.RouterGroup) {
+		rg.GET("sub", gimgin.GetHandler(ctl.Get))
+	})
 	return &ctl
 }
-
-func (*SubController) Path() string { return "sub" }
 
 func (c *SubController) Get(*gin.Context) interface{} {
 	return c.svc.getGreeting()

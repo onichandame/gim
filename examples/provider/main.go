@@ -3,18 +3,22 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/onichandame/gim"
+	gimgin "github.com/onichandame/gim/pkg/gin"
 )
 
-type MainModule struct{}
-
-func (*MainModule) Imports() []interface{}     { return []interface{}{&SubModule{}} }
-func (*MainModule) Controllers() []interface{} { return []interface{}{newMainController} }
+var MainModule = gim.Module{
+	Imports:   []*gim.Module{&SubModule, &gimgin.GinModule},
+	Providers: []interface{}{newMainController},
+}
 
 type MainController struct{ svc *SubService }
 
-func newMainController(svc *SubService) *MainController {
+func newMainController(svc *SubService, ginsvc *gimgin.GinService) *MainController {
 	var c MainController
 	c.svc = svc
+	ginsvc.AddRoute(func(rg *gin.RouterGroup) {
+		rg.GET("", gimgin.GetHandler(c.Get))
+	})
 	return &c
 }
 func (c *MainController) Get(*gin.Context) interface{} {
@@ -22,6 +26,7 @@ func (c *MainController) Get(*gin.Context) interface{} {
 }
 
 func main() {
-	app := gim.Bootstrap(&MainModule{})
-	app.Server().Run("0.0.0.0:80")
+	MainModule.Bootstrap()
+	server := MainModule.Get(&gimgin.GinService{}).(*gimgin.GinService).Bootstrap()
+	server.Run("0.0.0.0:80")
 }

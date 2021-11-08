@@ -1,11 +1,14 @@
 package job
 
-import "github.com/robfig/cron/v3"
+import (
+	"github.com/onichandame/gim"
+	"github.com/robfig/cron/v3"
+)
 
-type JobModule struct{}
-
-func (m *JobModule) Providers() []interface{} { return []interface{}{newJobService} }
-func (m *JobModule) Exports() []interface{}   { return []interface{}{&JobService{}} }
+var JobModule = gim.Module{
+	Providers: []interface{}{newJobService},
+	Exports:   []interface{}{newJobService},
+}
 
 type JobService struct {
 	cron *cron.Cron

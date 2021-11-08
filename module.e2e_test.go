@@ -8,28 +8,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type MainModule struct{}
-
-func (m *MainModule) Imports() []interface{}     { return []interface{}{&SubModule{}} }
-func (m *MainModule) Controllers() []interface{} { return []interface{}{newMainController} }
-
-type MainController struct {
+var MainModule = gim.Module{
+	Imports:   []*gim.Module{&SubModule},
+	Providers: []interface{}{newMainProvider},
 }
 
-var ctlSubService *SubService
+type MainProvider struct{}
 
-func newMainController(subSvc *SubService) *MainController {
-	var ctl MainController
-	ctlSubService = subSvc
-	return &ctl
+var mainSubService *SubService
+
+func newMainProvider(subsvc *SubService) *MainProvider {
+	mainSubService = subsvc
+	var prov MainProvider
+	return &prov
 }
 
-type SubModule struct{}
-
-func (m *SubModule) Providers() []interface{} {
-	return []interface{}{newSubService, newSubPrivateService}
+var SubModule = gim.Module{
+	Providers: []interface{}{
+		newSubPrivateService,
+		newSubService,
+	},
+	Exports: []interface{}{newSubService},
 }
-func (m *SubModule) Exports() []interface{} { return []interface{}{newSubService} }
 
 type SubService struct{}
 
@@ -52,13 +52,14 @@ func newSubPrivateService(s *SubService) *SubPrivateService {
 }
 
 func TestGimModule(t *testing.T) {
-	gim.Bootstrap(&MainModule{})
+	MainModule.Bootstrap()
 	getptr := func(ptr interface{}) string { return fmt.Sprintf("%p", ptr) }
 	assert.NotNil(t, subService)
-	assert.NotNil(t, ctlSubService)
+	assert.NotNil(t, mainSubService)
 	assert.NotNil(t, spsvc)
-	assert.True(t, ctlSubService == subService)
-	assert.True(t, getptr(ctlSubService) == getptr(subService))
-	assert.Equal(t, subService, ctlSubService)
+	assert.True(t, mainSubService == subService)
+	assert.True(t, getptr(mainSubService) == getptr(subService))
+	assert.Equal(t, subService, mainSubService)
 	assert.Equal(t, subService, spsvc)
+	assert.Equal(t, subService, MainModule.Get(&SubService{}))
 }

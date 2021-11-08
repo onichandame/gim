@@ -1,13 +1,8 @@
 package graphql
 
-type GraphqlModule struct{}
+import "github.com/onichandame/gim"
 
-func (m *GraphqlModule) Providers() []interface{} {
-	return []interface{}{newGraphqlService}
-}
-func (m *GraphqlModule) Exports() []interface{} {
-	return []interface{}{newGraphqlService}
-}
-func (m *GraphqlModule) Controllers() []interface{} {
-	return []interface{}{newGraphqlBuilderController}
+var GraphqlModule = gim.Module{
+	Providers: []interface{}{newGraphqlService},
+	Exports:   []interface{}{newGraphqlService},
 }
