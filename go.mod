@@ -3,7 +3,6 @@ module github.com/onichandame/gim
 go 1.17
 
 require (
-	github.com/fatih/structtag v1.2.0
 	github.com/gin-gonic/gin v1.7.4
 	github.com/graphql-go/graphql v0.8.0
 	github.com/onichandame/go-utils v0.0.5
