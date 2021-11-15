@@ -13,7 +13,7 @@ type MainController struct{}
 func newController(ginsvc *gimgin.GinService) *MainController {
 	var ctlr MainController
 	ginsvc.AddRoute(func(rg *gin.RouterGroup) {
-		rg.GET("", gimgin.GetHandler(func(c *gin.Context) interface{} {
+		rg.GET("", gimgin.GetHTTPHandler(func(c *gin.Context) interface{} {
 			return `hello world`
 		}))
 	})

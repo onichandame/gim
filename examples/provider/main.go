@@ -17,7 +17,7 @@ func newMainController(svc *SubService, ginsvc *gimgin.GinService) *MainControll
 	var c MainController
 	c.svc = svc
 	ginsvc.AddRoute(func(rg *gin.RouterGroup) {
-		rg.GET("", gimgin.GetHandler(c.Get))
+		rg.GET("", gimgin.GetHTTPHandler(c.Get))
 	})
 	return &c
 }

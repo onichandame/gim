@@ -15,7 +15,7 @@ type withBody interface {
 	Body() interface{}
 }
 
-func GetHandler(fn func(*gin.Context) interface{}) gin.HandlerFunc {
+func GetHTTPHandler(fn func(*gin.Context) interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var res interface{}
 		err := goutils.Try(func() { res = fn(c) })
