@@ -30,6 +30,7 @@ func (main *Module) Bootstrap() {
 	main.modcontainers = make(map[*Module]injector.Container)
 	var loadModule func(mod *Module, visited map[interface{}]interface{})
 	loadModule = func(mod *Module, visited map[interface{}]interface{}) {
+		fmt.Println("module %v loading",mod.Name)
 		newVisited := func() map[interface{}]interface{} {
 			res := make(map[interface{}]interface{})
 			for k, v := range visited {
@@ -47,6 +48,7 @@ func (main *Module) Bootstrap() {
 				loadModule(m, newVisited())
 			}
 		}
+		fmt.Println("%v loaded",mod.Name)
 	}
 	loadModule(main, make(map[interface{}]interface{}))
 
