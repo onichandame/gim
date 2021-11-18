@@ -9,6 +9,7 @@ import (
 )
 
 type Module struct {
+	Name          string
 	Imports       []*Module
 	Exports       []interface{}
 	Providers     []interface{}
@@ -38,7 +39,7 @@ func (main *Module) Bootstrap() {
 			return res
 		}
 		if _, ok := visited[mod]; ok {
-			panic(fmt.Errorf("circular module dependency detected for module %v", goutils.UnwrapType(reflect.TypeOf(mod)).Name()))
+			panic(fmt.Errorf("circular module dependency detected for module %v", mod.Name))
 		}
 		if _, ok := main.modcontainers[mod]; !ok {
 			main.modcontainers[mod] = injector.NewContainer()
@@ -110,9 +111,9 @@ func (main *Module) Bootstrap() {
 				ind := sortedIndicis[i]
 				removeElement(ind)
 			}
-			sortedIndicis=make([]int, 0)
+			sortedIndicis = make([]int, 0)
 			if lastunsorted == len(unsorted) {
-				panic(fmt.Errorf("providers in module %v have circular dependency", mod))
+				panic(fmt.Errorf("providers in module %v have circular dependency", mod.Name))
 			}
 			lastunsorted = len(unsorted)
 			if len(unsorted) != 0 {
