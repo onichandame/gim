@@ -19,10 +19,6 @@ func (svc *GinService) SetServer(s *gin.Engine) { svc.engine = s }
 
 func (svc *GinService) Server() *gin.Engine { return svc.engine }
 
-type Controller struct {
-	Path string
-}
-
 func (svc *GinService) AddMiddleware(mw gin.HandlerFunc) {
 	svc.middewares = append(svc.middewares, mw)
 }

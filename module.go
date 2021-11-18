@@ -112,8 +112,8 @@ func (main *Module) Bootstrap() {
 				removeElement(ind)
 			}
 			sortedIndicis = make([]int, 0)
-			if lastunsorted != 0 && lastunsorted == len(unsorted) {
-				panic(fmt.Errorf("providers in module %v have dependencies unresolvable. it can be a circular dependency or a missing dependency", mod.Name))
+			if len(unsorted) != 0 && lastunsorted == len(unsorted) {
+				panic(fmt.Errorf("providers in module %v have dependencies unresolvable. it can be a circular dependency or a missing dependenckjy", mod.Name))
 			}
 			lastunsorted = len(unsorted)
 			if len(unsorted) != 0 {
