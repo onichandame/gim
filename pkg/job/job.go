@@ -6,6 +6,7 @@ import (
 )
 
 var JobModule = gim.Module{
+	Name:      "JobModule",
 	Providers: []interface{}{newJobService},
 	Exports:   []interface{}{newJobService},
 }
