@@ -9,7 +9,7 @@ import (
 )
 
 var MainModule = gim.Module{
-	Imports:   []*gim.Module{&SubModule},
+	Imports:   []*gim.Module{&SubModule, &SubDummyModule},
 	Providers: []interface{}{newMainProvider},
 }
 
@@ -50,6 +50,8 @@ func newSubPrivateService(s *SubService) *SubPrivateService {
 	spsvc = s
 	return &svc
 }
+
+var SubDummyModule = gim.Module{}
 
 func TestGimModule(t *testing.T) {
 	MainModule.Bootstrap()
