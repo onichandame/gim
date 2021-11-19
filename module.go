@@ -3,9 +3,11 @@ package gim
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/onichandame/gim/pkg/injector"
 	goutils "github.com/onichandame/go-utils"
+	"github.com/sirupsen/logrus"
 )
 
 type Module struct {
@@ -18,9 +20,10 @@ type Module struct {
 
 func (a *Module) Get(prov interface{}) interface{} {
 	for _, c := range a.modcontainers {
-		res := getSingleton(c, prov)
-		if res != nil {
-			return res
+		ent := newEntity(prov)
+		sing := c.Resolve(ent)
+		if sing != nil {
+			return sing
 		}
 	}
 	return nil
@@ -30,7 +33,10 @@ func (main *Module) Bootstrap() {
 	main.modcontainers = make(map[*Module]injector.Container)
 	var loadModule func(mod *Module, visited map[interface{}]interface{})
 	loadModule = func(mod *Module, visited map[interface{}]interface{}) {
-		fmt.Printf("module %v loading\n", mod.Name)
+		startTime := time.Now()
+		logger := logrus.New()
+		logger.SetFormatter(&logrus.TextFormatter{DisableTimestamp: true})
+		logger.Infoln(fmt.Sprintf("module %v loading\n", mod.Name))
 		getNewVisited := func() map[interface{}]interface{} {
 			res := make(map[interface{}]interface{})
 			for k, v := range visited {
@@ -108,7 +114,7 @@ func (main *Module) Bootstrap() {
 			}
 			sort()
 		}
-		fmt.Printf("module %v loaded\n", mod.Name)
+		logger.Infoln(fmt.Sprintf("module %v loaded  %v \n", mod.Name, time.Since(startTime).String()))
 	}
 	loadModule(main, make(map[interface{}]interface{}))
 

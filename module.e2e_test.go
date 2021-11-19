@@ -44,10 +44,12 @@ func newSubService() *SubService {
 type SubPrivateService struct{}
 
 var spsvc *SubService
+var sprivsvc *SubPrivateService
 
 func newSubPrivateService(s *SubService) *SubPrivateService {
 	var svc SubPrivateService
 	spsvc = s
+	sprivsvc = &svc
 	return &svc
 }
 
@@ -64,4 +66,5 @@ func TestGimModule(t *testing.T) {
 	assert.Equal(t, subService, mainSubService)
 	assert.Equal(t, subService, spsvc)
 	assert.Equal(t, subService, MainModule.Get(&SubService{}))
+	assert.Equal(t, sprivsvc, MainModule.Get(new(SubPrivateService)))
 }
