@@ -31,7 +31,7 @@ func (main *Module) Bootstrap() {
 	var loadModule func(mod *Module, visited map[interface{}]interface{})
 	loadModule = func(mod *Module, visited map[interface{}]interface{}) {
 		fmt.Printf("module %v loading\n", mod.Name)
-		newVisited := func() map[interface{}]interface{} {
+		getNewVisited := func() map[interface{}]interface{} {
 			res := make(map[interface{}]interface{})
 			for k, v := range visited {
 				res[k] = v
@@ -44,86 +44,72 @@ func (main *Module) Bootstrap() {
 		}
 		if _, ok := main.modcontainers[mod]; !ok {
 			main.modcontainers[mod] = injector.NewContainer()
-			for _, m := range mod.Imports {
-				loadModule(m, newVisited())
-			}
-		}
-		fmt.Printf("%v loaded\n", mod.Name)
-	}
-	loadModule(main, make(map[interface{}]interface{}))
-
-	loadedModules := make(map[interface{}]interface{})
-	var loadProviders func(mod *Module)
-	loadProviders = func(mod *Module) {
-		if _, ok := loadedModules[mod]; ok {
-			return
-		} else {
-			loadedModules[mod] = nil
-		}
-		for _, child := range mod.Imports {
-			loadProviders(child)
-			var loadExports func(c injector.Container, exp interface{})
-			loadExports = func(c injector.Container, exp interface{}) {
-				if expmod, ok := exp.(*Module); ok {
-					for _, expexp := range expmod.Exports {
-						loadExports(main.modcontainers[expmod], expexp)
+			for _, child := range mod.Imports {
+				loadModule(child, getNewVisited())
+				var loadExports func(c injector.Container, exp interface{})
+				loadExports = func(c injector.Container, exp interface{}) {
+					if expmod, ok := exp.(*Module); ok {
+						for _, expexp := range expmod.Exports {
+							loadExports(main.modcontainers[expmod], expexp)
+						}
+					} else {
+						expsing := getSingleton(c, exp)
+						main.modcontainers[mod].Bind(expsing)
 					}
-				} else {
-					expsing := getSingleton(c, exp)
-					main.modcontainers[mod].Bind(expsing)
+				}
+				for _, childexp := range child.Exports {
+					loadExports(main.modcontainers[child], childexp)
 				}
 			}
-			for _, childexp := range child.Exports {
-				loadExports(main.modcontainers[child], childexp)
+			unsorted := make([]interface{}, len(mod.Providers))
+			for i, v := range mod.Providers {
+				unsorted[i] = v
 			}
-		}
-		unsorted := make([]interface{}, len(mod.Providers))
-		for i, v := range mod.Providers {
-			unsorted[i] = v
-		}
-		sortedIndicis := make([]int, 0)
-		lastunsorted := len(unsorted)
-		var sort func()
-		sort = func() {
-			for i, p := range unsorted {
-				t := goutils.UnwrapType(reflect.TypeOf(p))
-				if t.Kind() == reflect.Func {
-					resolvable := true
-					for i := 0; i < t.NumIn(); i++ {
-						in := goutils.UnwrapType(t.In(i))
-						insing := main.modcontainers[mod].Resolve(reflect.New(in).Interface())
-						if insing == nil {
-							resolvable = false
-							break
+			lastunsorted := len(unsorted)
+			sortedIndicis := make([]int, 0)
+			var sort func()
+			sort = func() {
+				for i, p := range unsorted {
+					t := goutils.UnwrapType(reflect.TypeOf(p))
+					if t.Kind() == reflect.Func {
+						resolvable := true
+						for i := 0; i < t.NumIn(); i++ {
+							in := goutils.UnwrapType(t.In(i))
+							insing := main.modcontainers[mod].Resolve(reflect.New(in).Interface())
+							if insing == nil {
+								resolvable = false
+								break
+							}
 						}
-					}
-					if resolvable {
+						if resolvable {
+							main.modcontainers[mod].Bind(p)
+							sortedIndicis = append(sortedIndicis, i)
+						}
+					} else {
 						main.modcontainers[mod].Bind(p)
 						sortedIndicis = append(sortedIndicis, i)
 					}
-				} else {
-					main.modcontainers[mod].Bind(p)
-					sortedIndicis = append(sortedIndicis, i)
+				}
+				removeElement := func(ind int) {
+					unsorted = append(unsorted[:ind], unsorted[ind+1:]...)
+				}
+				for i := len(sortedIndicis) - 1; i >= 0; i-- {
+					ind := sortedIndicis[i]
+					removeElement(ind)
+				}
+				sortedIndicis = make([]int, 0)
+				if len(unsorted) != 0 && lastunsorted == len(unsorted) {
+					panic(fmt.Errorf("providers in module %v have dependencies unresolvable. it can be a circular dependency or a missing dependenckjy", mod.Name))
+				}
+				lastunsorted = len(unsorted)
+				if len(unsorted) != 0 {
+					sort()
 				}
 			}
-			removeElement := func(ind int) {
-				unsorted = append(unsorted[:ind], unsorted[ind+1:]...)
-			}
-			for i := len(sortedIndicis) - 1; i >= 0; i-- {
-				ind := sortedIndicis[i]
-				removeElement(ind)
-			}
-			sortedIndicis = make([]int, 0)
-			if len(unsorted) != 0 && lastunsorted == len(unsorted) {
-				panic(fmt.Errorf("providers in module %v have dependencies unresolvable. it can be a circular dependency or a missing dependenckjy", mod.Name))
-			}
-			lastunsorted = len(unsorted)
-			if len(unsorted) != 0 {
-				sort()
-			}
+			sort()
 		}
-		sort()
+		fmt.Printf("module %v loaded\n", mod.Name)
 	}
+	loadModule(main, make(map[interface{}]interface{}))
 
-	loadProviders(main)
 }

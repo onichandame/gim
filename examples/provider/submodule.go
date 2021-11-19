@@ -7,7 +7,7 @@ import (
 )
 
 var SubModule = gim.Module{
-	Imports:   []*gim.Module{&gimgin.GinModule},
+	Imports:   []*gim.Module{&gimgin.GinModule, &CommonModule},
 	Providers: []interface{}{newSubService, newSubController},
 	Exports:   []interface{}{newSubService},
 }
@@ -33,11 +33,12 @@ func (svc *SubService) getGreeting() string {
 
 type SubController struct{ svc *SubService }
 
-func newSubController(svc *SubService, ginsvc *gimgin.GinService) *SubController {
+func newSubController(svc *SubService, ginsvc *gimgin.GinService, cmsvc *CommonService) *SubController {
 	var ctl SubController
 	ctl.svc = svc
 	ginsvc.AddRoute(func(rg *gin.RouterGroup) {
 		rg.GET("sub", gimgin.GetHTTPHandler(ctl.Get))
+		rg.GET("subtick", gimgin.GetHTTPHandler(func(c *gin.Context) interface{} { return cmsvc.GetNextTick() }))
 	})
 	return &ctl
 }

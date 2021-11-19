@@ -7,17 +7,18 @@ import (
 )
 
 var MainModule = gim.Module{
-	Imports:   []*gim.Module{&SubModule, &gimgin.GinModule},
+	Imports:   []*gim.Module{&SubModule, &gimgin.GinModule, &CommonModule},
 	Providers: []interface{}{newMainController},
 }
 
 type MainController struct{ svc *SubService }
 
-func newMainController(svc *SubService, ginsvc *gimgin.GinService) *MainController {
+func newMainController(svc *SubService, ginsvc *gimgin.GinService, cmsvc *CommonService) *MainController {
 	var c MainController
 	c.svc = svc
 	ginsvc.AddRoute(func(rg *gin.RouterGroup) {
 		rg.GET("", gimgin.GetHTTPHandler(c.Get))
+		rg.GET("tick", gimgin.GetHTTPHandler(func(c *gin.Context) interface{} { return cmsvc.GetNextTick() }))
 	})
 	return &c
 }
