@@ -31,7 +31,10 @@ func (a *Module) Get(prov interface{}) interface{} {
 
 func (main *Module) Bootstrap() {
 	logger := logrus.New()
-	logger.SetFormatter(&logrus.TextFormatter{DisableTimestamp: true})
+	logger.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp: true,
+		PadLevelText:     true,
+	})
 	main.modcontainers = make(map[*Module]injector.Container)
 	var loadModule func(mod *Module, visited map[interface{}]interface{})
 	loadModule = func(mod *Module, visited map[interface{}]interface{}) {
@@ -66,7 +69,7 @@ func (main *Module) Bootstrap() {
 				}
 			}
 			startTime := time.Now()
-			logger.Infoln(fmt.Sprintf("module %v loading\n", mod.Name))
+			logger.Infoln(fmt.Sprintf("[%v] loading\n", mod.Name))
 			unsorted := make([]interface{}, len(mod.Providers))
 			for i, v := range mod.Providers {
 				unsorted[i] = v
@@ -113,7 +116,7 @@ func (main *Module) Bootstrap() {
 				}
 			}
 			sort()
-			logger.Infoln(fmt.Sprintf("module %v loaded  %v \n", mod.Name, time.Since(startTime).String()))
+			logger.Infoln(fmt.Sprintf("[%v] loaded in %v \n", mod.Name, time.Since(startTime).String()))
 		}
 	}
 	loadModule(main, make(map[interface{}]interface{}))
