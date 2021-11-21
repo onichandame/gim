@@ -20,8 +20,8 @@ type Module struct {
 
 func (a *Module) Get(prov interface{}) interface{} {
 	for _, c := range a.modcontainers {
-		ent := newEntity(prov)
-		sing := c.Resolve(ent)
+		t := getType(prov)
+		sing := c[t]
 		if sing != nil {
 			return sing
 		}
@@ -61,8 +61,8 @@ func (main *Module) Bootstrap() {
 							loadExports(main.modcontainers[expmod], expexp)
 						}
 					} else {
-						expsing := getSingleton(c, exp)
-						main.modcontainers[mod].Bind(expsing)
+						exptype, expsing := getTypeAndSingleton(c, exp)
+						main.modcontainers[mod][exptype] = expsing
 					}
 				}
 				for _, childexp := range child.Exports {

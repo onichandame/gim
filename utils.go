@@ -7,14 +7,16 @@ import (
 	goutils "github.com/onichandame/go-utils"
 )
 
-func newEntity(entOrFunc interface{}) interface{} {
+func getType(entOrFunc interface{}) reflect.Type {
 	t := goutils.UnwrapType(reflect.TypeOf(entOrFunc))
-	if t.Kind() == reflect.Func {
+	switch t.Kind() {
+	case reflect.Func:
 		t = goutils.UnwrapType(t.Out(0))
 	}
-	return reflect.New(t).Interface()
+	return t
 }
 
-func getSingleton(container injector.Container, ent interface{}) interface{} {
-	return container.ResolveOrPanic(newEntity(ent))
+func getTypeAndSingleton(container injector.Container, ent interface{}) (reflect.Type, interface{}) {
+	t := getType(ent)
+	return t, container[t]
 }

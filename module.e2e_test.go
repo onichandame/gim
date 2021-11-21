@@ -9,62 +9,70 @@ import (
 )
 
 var MainModule = gim.Module{
+	Name:      `MainModule`,
 	Imports:   []*gim.Module{&SubModule, &SubDummyModule},
 	Providers: []interface{}{newMainProvider},
 }
 
-type MainProvider struct{}
+type MainProvider struct {
+	subprov SubProvider
+}
 
-var mainSubService *SubService
-
-func newMainProvider(subsvc *SubService) *MainProvider {
-	mainSubService = subsvc
+func newMainProvider(subprov SubProvider) *MainProvider {
 	var prov MainProvider
+	prov.subprov = subprov
 	return &prov
 }
 
 var SubModule = gim.Module{
+	Name: `SubModule`,
 	Providers: []interface{}{
 		newSubPrivateService,
-		newSubService,
+		newSubProvider,
 	},
-	Exports: []interface{}{newSubService},
+	Exports: []interface{}{newSubProvider},
+}
+
+type SubProvider interface {
+	GetName() string
 }
 
 type SubService struct{}
 
-var subService *SubService
+func (*SubService) GetName() string { return `SubService` }
 
-func newSubService() *SubService {
+func newSubProvider() SubProvider {
 	var svc SubService
-	subService = &svc
 	return &svc
 }
 
-type SubPrivateService struct{}
+type SubPrivateService struct {
+	prov SubProvider
+}
 
-var spsvc *SubService
-var sprivsvc *SubPrivateService
-
-func newSubPrivateService(s *SubService) *SubPrivateService {
+func newSubPrivateService(prov SubProvider) *SubPrivateService {
 	var svc SubPrivateService
-	spsvc = s
-	sprivsvc = &svc
+	svc.prov = prov
 	return &svc
 }
 
-var SubDummyModule = gim.Module{}
+var SubDummyModule = gim.Module{Name: `SubDummyModule`}
 
 func TestGimModule(t *testing.T) {
 	MainModule.Bootstrap()
 	getptr := func(ptr interface{}) string { return fmt.Sprintf("%p", ptr) }
-	assert.NotNil(t, subService)
-	assert.NotNil(t, mainSubService)
-	assert.NotNil(t, spsvc)
-	assert.True(t, mainSubService == subService)
-	assert.True(t, getptr(mainSubService) == getptr(subService))
-	assert.Equal(t, subService, mainSubService)
-	assert.Equal(t, subService, spsvc)
-	assert.Equal(t, subService, MainModule.Get(&SubService{}))
-	assert.Equal(t, sprivsvc, MainModule.Get(new(SubPrivateService)))
+	mainprov := MainModule.Get(new(MainProvider)).(*MainProvider)
+	subprov := MainModule.Get(new(SubProvider)).(SubProvider)
+	subprivprov := MainModule.Get(new(SubPrivateService)).(*SubPrivateService)
+	assert.NotNil(t, mainprov)
+	assert.NotNil(t, mainprov.subprov)
+	assert.NotNil(t, subprov)
+	assert.NotNil(t, subprivprov)
+	assert.NotNil(t, subprivprov.prov)
+	assert.True(t, mainprov.subprov == subprov)
+	assert.True(t, getptr(mainprov.subprov) == getptr(subprov))
+	assert.Equal(t, subprivprov.prov, subprov)
+	assert.True(t, getptr(subprivprov.prov) == getptr(subprov))
+	assert.Equal(t, subprivprov.prov, mainprov.subprov)
+	assert.True(t, getptr(subprivprov.prov) == getptr(mainprov.subprov))
 }

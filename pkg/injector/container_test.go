@@ -7,9 +7,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type Interface interface {
+	GetName() string
+}
+type Entity struct{}
+
+func (*Entity) GetName() string { return `asdf` }
 func TestContainer(t *testing.T) {
 	t.Run("bind singleton", func(t *testing.T) {
-		type Entity struct{}
+		t.Run("interface", func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				container := injector.NewContainer()
+				var i Interface
+				i = new(Entity)
+				container.Bind(i)
+				sing := container.ResolveOrPanic(i)
+				assert.IsType(t, i, sing)
+				assert.Equal(t, i.GetName(), sing.(Interface).GetName())
+			})
+		})
 		t.Run("concret", func(t *testing.T) {
 			assert.NotPanics(t, func() {
 				container := injector.NewContainer()
