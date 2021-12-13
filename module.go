@@ -10,14 +10,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Module defines a self-contained module with all its internal and external dependencies.
+//
+// Every module should be uniquely defined by one instance of this type.
+//
+// The dependency graph of all modules in an application must be a directed acyclic graph(DAG), in
+// other words, cyclic dependency is not allowed. If the rule is broken, Bootstrap will fail.
 type Module struct {
-	Name          string
-	Imports       []*Module
-	Exports       []interface{}
-	Providers     []interface{}
+	Name          string        // defines the displaying name for this module used for logging purposes.
+	Imports       []*Module     // defines the dependency on external modules.
+	Exports       []interface{} // defines the providers in the module which can be used by other modules.
+	Providers     []interface{} // defines all the providers in this module.
 	modcontainers map[*Module]injector.Container
 }
 
+// Get returns the singleton of the specified type in a bootstrapped module. The calling module must
+// be the root(where Bootstrap is called). It returns nil if not found
+//
+// The singleton need not be exported. It is not recommended to rely on this method when many private
+// singletons exist in many modules, as it's behaviour is not defined in such circumstance.
 func (a *Module) Get(prov interface{}) interface{} {
 	for _, c := range a.modcontainers {
 		t := getType(prov)
@@ -29,6 +40,8 @@ func (a *Module) Get(prov interface{}) interface{} {
 	return nil
 }
 
+// Bootstrap injects the dependencies as declared into every module in the tree.
+// It panics on any error occurred
 func (main *Module) Bootstrap() {
 	logger := logrus.New().WithFields(logrus.Fields{
 		"pkg": "Gim",
@@ -121,5 +134,4 @@ func (main *Module) Bootstrap() {
 		}
 	}
 	loadModule(main, make(map[interface{}]interface{}))
-
 }
