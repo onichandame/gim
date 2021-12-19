@@ -4,7 +4,7 @@ Modular framework based on dependency injection. The modularization design is bo
 
 # Usage
 
-see [examples](./examples)
+see [examples](./example)
 
 # Architecture
 
